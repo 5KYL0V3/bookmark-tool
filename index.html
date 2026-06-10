@@ -1,0 +1,894 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>书签 HTML 生成器（书签栏优先版）</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: "Microsoft YaHei", "Segoe UI", sans-serif;
+            max-width: 980px;
+            margin: 30px auto;
+            padding: 0 20px;
+            background-color: #f0f2f5;
+            color: #333;
+        }
+
+        .container {
+            background: #ffffff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        }
+
+        h2 {
+            color: #1a1a1a;
+            border-bottom: 3px solid #0078d4;
+            padding-bottom: 15px;
+            margin-top: 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .desc {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 15px;
+            line-height: 1.7;
+        }
+
+        .format-box {
+            background: #f7f7f7;
+            border: 1px solid #e2e2e2;
+            border-radius: 8px;
+            padding: 12px 14px;
+            margin-bottom: 18px;
+            font-size: 13px;
+            color: #444;
+            line-height: 1.7;
+        }
+
+        .format-box code {
+            font-family: Consolas, "Courier New", monospace;
+            color: #d83b01;
+        }
+
+        .input-area {
+            margin-bottom: 20px;
+        }
+
+        textarea {
+            width: 100%;
+            height: 260px;
+            padding: 15px;
+            border: 2px solid #e1e1e1;
+            border-radius: 8px;
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 13px;
+            line-height: 1.6;
+            resize: vertical;
+            transition: border-color 0.3s;
+        }
+
+        textarea:focus {
+            border-color: #0078d4;
+            outline: none;
+        }
+
+        .btn-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .btn {
+            padding: 10px 24px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 15px;
+            font-weight: 600;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn:hover {
+            transform: translateY(-1px);
+        }
+
+        .btn-primary {
+            background-color: #0078d4;
+            color: #ffffff;
+        }
+
+        .btn-primary:hover {
+            background-color: #0063b1;
+        }
+
+        .btn-success {
+            background-color: #107c10;
+            color: #ffffff;
+            display: none;
+        }
+
+        .btn-success:hover {
+            background-color: #0d660d;
+        }
+
+        .btn-secondary {
+            background-color: #605e5c;
+            color: #ffffff;
+            display: none;
+        }
+
+        .btn-secondary:hover {
+            background-color: #484644;
+        }
+
+        .btn-danger {
+            background-color: #c50f1f;
+            color: #ffffff;
+        }
+
+        .btn-danger:hover {
+            background-color: #a80000;
+        }
+
+        .stats {
+            background: #e6f4ff;
+            border-left: 5px solid #0078d4;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+            font-size: 14px;
+            line-height: 1.8;
+            display: none;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .warn-panel {
+            background: #fff4ce;
+            border-left: 5px solid #ffb900;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+            font-size: 14px;
+            line-height: 1.8;
+            display: none;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .warn-panel details {
+            margin-top: 8px;
+        }
+
+        .warn-panel summary {
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .warn-line {
+            font-family: Consolas, "Courier New", monospace;
+            background: rgba(255, 255, 255, 0.65);
+            padding: 6px 8px;
+            border-radius: 4px;
+            margin-top: 6px;
+            overflow-wrap: break-word;
+        }
+
+        .preview-title {
+            margin-top: 24px;
+            margin-bottom: 10px;
+            font-weight: 700;
+            color: #222;
+            display: none;
+        }
+
+        .preview-box {
+            border: 1px solid #eeeeee;
+            height: 420px;
+            overflow-y: auto;
+            background: #fafafa;
+            padding: 20px;
+            border-radius: 8px;
+            display: none;
+            font-family: "Segoe UI", sans-serif;
+        }
+
+        .tree-root {
+            font-weight: bold;
+            color: #d83b01;
+            margin-top: 12px;
+            padding: 6px 0;
+            border-bottom: 1px solid #eeeeee;
+        }
+
+        .tree-sub {
+            font-weight: bold;
+            color: #0078d4;
+            margin-left: 20px;
+            margin-top: 8px;
+            position: relative;
+        }
+
+        .tree-item {
+            margin-left: 45px;
+            color: #444444;
+            font-size: 13px;
+            padding: 4px 0;
+            display: flex;
+            align-items: center;
+            line-height: 1.5;
+        }
+
+        .tree-item::before {
+            content: "🔗";
+            margin-right: 6px;
+            font-size: 10px;
+        }
+
+        .tag-warn {
+            background: #fff4ce;
+            color: #8a6d3b;
+            padding: 1px 5px;
+            border-radius: 3px;
+            font-size: 11px;
+            margin-left: 6px;
+            white-space: nowrap;
+        }
+
+        .small-tip {
+            color: #777;
+            font-size: 13px;
+            line-height: 1.7;
+            margin-top: 14px;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(5px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @media (max-width: 640px) {
+            body {
+                margin: 15px auto;
+                padding: 0 12px;
+            }
+
+            .container {
+                padding: 20px;
+            }
+
+            .btn {
+                width: 100%;
+                justify-content: center;
+            }
+
+            textarea {
+                height: 220px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>
+        <span>📂</span>
+        <span>书签 HTML 生成器（书签栏优先版）</span>
+    </h2>
+
+    <p class="desc">
+        这个工具用于把整理好的 CSV 书签数据重新生成浏览器可导入的 HTML 书签文件。
+        生成文件会使用 <b>PERSONAL_TOOLBAR_FOLDER</b> 标记，尽量让浏览器识别为“收藏夹栏 / 书签栏”。
+        但最终导入位置仍可能受浏览器策略影响。
+    </p>
+
+    <div class="format-box">
+        推荐输入格式：<br>
+        <code>大类,小类,网站标题,备注说明,网络预警,网址</code><br>
+        网络预警建议使用：<code>国内直连</code>、<code>需翻墙</code>、<code>访问慢</code><br>
+        已兼容网址格式：<code>https://xxx.com</code> 和 <code>[https://xxx.com](https://xxx.com)</code>
+    </div>
+
+    <div class="input-area">
+        <textarea id="inputData" placeholder="请粘贴 CSV 数据，例如：
+
+大类,小类,网站标题,备注说明,网络预警,网址
+工具,图像处理,Bigjpg,基于人工智能的图片无损放大工具,国内直连,https://bigjpg.com/
+开发,代码托管,GitHub,全球最大的开发者社区及代码管理平台,访问慢,[https://github.com/](https://github.com/)"></textarea>
+    </div>
+
+    <div class="btn-group">
+        <button class="btn btn-primary" onclick="processData()">🛠️ 修复并生成</button>
+        <button id="dlBtn" class="btn btn-success" onclick="downloadData()">💾 下载 HTML 文件</button>
+        <button id="copyBtn" class="btn btn-secondary" onclick="copyResult()">📋 复制生成结果</button>
+        <button class="btn btn-danger" onclick="clearAll()">🗑️ 清空</button>
+    </div>
+
+    <div id="statsPanel" class="stats"></div>
+    <div id="warnPanel" class="warn-panel"></div>
+
+    <div id="previewTitle" class="preview-title">📌 书签结构预览</div>
+    <div id="previewPanel" class="preview-box"></div>
+
+    <div class="small-tip">
+        使用方法：生成并下载 HTML 文件后，在 Chrome / Edge 中进入书签管理器，选择“导入书签”，再选择下载的 HTML 文件。
+    </div>
+</div>
+
+<script>
+    let finalHtml = "";
+    let lastFileName = "";
+
+    const VALID_WARNINGS = new Set(["国内直连", "需翻墙", "访问慢"]);
+
+    function getEl(id) {
+        return document.getElementById(id);
+    }
+
+    function escapeHtml(text) {
+        if (text === undefined || text === null) return "";
+        return String(text)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+
+    function cleanText(text) {
+        if (text === undefined || text === null) return "";
+        return String(text)
+            .replace(/^\uFEFF/, "")
+            .trim()
+            .replace(/\s+/g, " ");
+    }
+
+    function extractUrl(text) {
+        if (!text) return "";
+
+        let value = cleanText(text);
+
+        // 兼容 Markdown 链接格式：
+        // [https://example.com](https://example.com)
+        // [标题](https://example.com)
+        const markdownMatch = value.match(/\((https?:\/\/[^)\s]+)\)/i);
+        if (markdownMatch) {
+            return markdownMatch[1].trim();
+        }
+
+        // 兼容尖括号格式：
+        // <https://example.com>
+        const angleMatch = value.match(/<\s*(https?:\/\/[^>\s]+)\s*>/i);
+        if (angleMatch) {
+            return angleMatch[1].trim();
+        }
+
+        // 兼容普通文本里夹带网址
+        const urlMatch = value.match(/https?:\/\/[^\s<>"'，；\]\)]+/i);
+        if (urlMatch) {
+            return urlMatch[0].trim();
+        }
+
+        return value;
+    }
+
+    function isValidUrl(url) {
+        if (!url) return false;
+
+        const realUrl = extractUrl(url);
+
+        try {
+            const u = new URL(realUrl);
+            return u.protocol === "http:" || u.protocol === "https:";
+        } catch (e) {
+            return false;
+        }
+    }
+
+    function normalizeUrlForDedupe(rawUrl) {
+        let url = extractUrl(rawUrl);
+
+        try {
+            const u = new URL(url);
+
+            u.protocol = u.protocol.toLowerCase();
+            u.hostname = u.hostname.toLowerCase();
+
+            const trackingParams = [
+                "utm_source",
+                "utm_medium",
+                "utm_campaign",
+                "utm_term",
+                "utm_content",
+                "fbclid",
+                "gclid",
+                "yclid"
+            ];
+
+            trackingParams.forEach(param => {
+                u.searchParams.delete(param);
+            });
+
+            if (u.pathname === "/") {
+                u.pathname = "";
+            } else {
+                u.pathname = u.pathname.replace(/\/+$/, "");
+            }
+
+            return u.toString().replace(/\/$/, "");
+        } catch (e) {
+            return url.replace(/\/+$/, "");
+        }
+    }
+
+    function parseCsvLine(line) {
+        const result = [];
+        let current = "";
+        let inQuotes = false;
+
+        for (let i = 0; i < line.length; i++) {
+            const char = line[i];
+            const next = line[i + 1];
+
+            if (char === '"') {
+                if (inQuotes && next === '"') {
+                   current += '"';
+                    i++;
+                } else {
+                    inQuotes = !inQuotes;
+                }
+            } else if (char === "," && !inQuotes) {
+                result.push(current.trim());
+                current = "";
+            } else {
+                current += char;
+            }
+        }
+
+        result.push(current.trim());
+        return result.map(cleanText);
+    }
+
+    function findUrlIndex(parts) {
+        for (let i = parts.length - 1; i >= 0; i--) {
+            if (isValidUrl(parts[i])) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    function guessTitleFromUrl(url) {
+        try {
+            const u = new URL(extractUrl(url));
+            return u.hostname.replace(/^www\./, "");
+        } catch (e) {
+            return "未命名书签";
+        }
+    }
+
+    function normalizeRecord(parts, lineNumber, originalLine) {
+        if (!parts || parts.length === 0) {
+            return {
+                skip: true
+            };
+        }
+
+        if (parts[0] === "大类" && parts[1] === "小类") {
+            return {
+                skip: true
+            };
+        }
+
+        let cat = "未分类";
+        let sub = "其他";
+        let title = "未命名书签";
+        let note = "";
+        let warning = "";
+        let url = "";
+
+        if (parts.length >= 6) {
+            cat = cleanText(parts[0]) || "未分类";
+            sub = cleanText(parts[1]) || "其他";
+            title = cleanText(parts[2]) || "未命名书签";
+
+            url = extractUrl(parts[parts.length - 1]);
+            warning = cleanText(parts[parts.length - 2]);
+
+            note = parts.slice(3, parts.length - 2)
+                .map(cleanText)
+                .filter(Boolean)
+                .join("，");
+        } else {
+            const urlIndex = findUrlIndex(parts);
+
+            if (urlIndex === -1) {
+                return {
+                    error: true,
+                    lineNumber,
+                    reason: "未找到有效网址",
+                    line: originalLine
+                };
+            }
+
+            url = extractUrl(parts[urlIndex]);
+
+            const rest = parts
+                .filter((_, index) => index !== urlIndex)
+                .map(cleanText)
+                .filter(Boolean);
+
+            const warningIndex = rest.findIndex(item => VALID_WARNINGS.has(item));
+
+            if (warningIndex !== -1) {
+                warning = rest[warningIndex];
+                rest.splice(warningIndex, 1);
+            }
+
+            cat = rest[0] || "未分类";
+            sub = rest[1] || "其他";
+            title = rest[2] || guessTitleFromUrl(url);
+            note = rest.slice(3).join("，");
+        }
+
+        if (!isValidUrl(url)) {
+            return {
+                error: true,
+                lineNumber,
+                reason: "网址格式无效",
+                line: originalLine
+            };
+        }
+
+        url = extractUrl(url);
+
+        if (!VALID_WARNINGS.has(warning)) {
+            if (warning) {
+                note = note ? `${note}；原预警字段：${warning}` : `原预警字段：${warning}`;
+            }
+            warning = "访问慢";
+        }
+
+        if (!cat) cat = "未分类";
+        if (!sub) sub = "其他";
+        if (!title) title = guessTitleFromUrl(url);
+
+        return {
+            cat,
+            sub,
+            title,
+            note,
+            warning,
+            url
+        };
+    }
+
+    function buildDisplayTitle(record) {
+        let displayTitle = record.title;
+
+        if (record.warning) {
+            displayTitle += ` [${record.warning}]`;
+        }
+
+        if (record.note) {
+            displayTitle += ` - ${record.note}`;
+        }
+
+        if (displayTitle.length > 250) {
+            displayTitle = displayTitle.substring(0, 247) + "...";
+        }
+
+        return displayTitle;
+    }
+
+    function resetOutput() {
+        finalHtml = "";
+        lastFileName = "";
+
+        getEl("dlBtn").style.display = "none";
+        getEl("copyBtn").style.display = "none";
+        getEl("statsPanel").style.display = "none";
+        getEl("warnPanel").style.display = "none";
+        getEl("previewTitle").style.display = "none";
+        getEl("previewPanel").style.display = "none";
+
+        getEl("statsPanel").innerHTML = "";
+        getEl("warnPanel").innerHTML = "";
+        getEl("previewPanel").innerHTML = "";
+    }
+
+    function processData() {
+        const raw = getEl("inputData").value;
+
+        if (!raw.trim()) {
+            alert("请先粘贴 CSV 数据。");
+            return;
+        }
+
+        const lines = raw.split(/\r?\n/);
+
+        const urlSet = new Set();
+        const categoryMap = {};
+
+        let totalLineCount = 0;
+        let validCount = 0;
+        let dupCount = 0;
+        let categoryCount = 0;
+        let subCategoryCount = 0;
+
+        const duplicateLines = [];
+        const invalidLines = [];
+
+        lines.forEach((originalLine, index) => {
+            const lineNumber = index + 1;
+            const line = originalLine.trim();
+
+            if (!line) return;
+
+            totalLineCount++;
+
+            const parts = parseCsvLine(line);
+            const record = normalizeRecord(parts, lineNumber, originalLine);
+
+            if (record.skip) {
+                return;
+            }
+
+            if (record.error) {
+                invalidLines.push(record);
+                return;
+            }
+
+            const dedupeKey = normalizeUrlForDedupe(record.url);
+
+            if (urlSet.has(dedupeKey)) {
+                dupCount++;
+                duplicateLines.push({
+                    lineNumber,
+                    url: record.url,
+                    title: record.title
+                });
+                return;
+            }
+
+            urlSet.add(dedupeKey);
+
+            const displayTitle = buildDisplayTitle(record);
+
+            if (!categoryMap[record.cat]) {
+                categoryMap[record.cat] = {};
+            }
+
+            if (!categoryMap[record.cat][record.sub]) {
+                categoryMap[record.cat][record.sub] = [];
+            }
+
+            categoryMap[record.cat][record.sub].push({
+                title: displayTitle,
+                rawTitle: record.title,
+                url: record.url,
+                warning: record.warning,
+                note: record.note
+            });
+
+            validCount++;
+        });
+
+        categoryCount = Object.keys(categoryMap).length;
+
+        Object.values(categoryMap).forEach(subs => {
+            subCategoryCount += Object.keys(subs).length;
+        });
+
+        const now = Math.floor(Date.now() / 1000);
+
+        let htmlContent = `<!DOCTYPE NETSCAPE-Bookmark-file-1>
+<!-- This is an automatically generated file. -->
+<!-- It will be read and overwritten. DO NOT EDIT! -->
+<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=UTF-8">
+<TITLE>Bookmarks</TITLE>
+<H1>Bookmarks</H1>
+<DL><p>
+    <DT><H3 ADD_DATE="${now}" LAST_MODIFIED="${now}" PERSONAL_TOOLBAR_FOLDER="true">收藏夹栏</H3>
+    <DL><p>
+`;
+
+        let previewHtml = "";
+
+        for (const [cat, subs] of Object.entries(categoryMap)) {
+            htmlContent += `        <DT><H3 ADD_DATE="${now}" LAST_MODIFIED="${now}">${escapeHtml(cat)}</H3>\n`;
+            htmlContent += `        <DL><p>\n`;
+
+            previewHtml += `<div class="tree-root">📂 ${escapeHtml(cat)}</div>`;
+
+            for (const [sub, items] of Object.entries(subs)) {
+                htmlContent += `            <DT><H3 ADD_DATE="${now}" LAST_MODIFIED="${now}">${escapeHtml(sub)}</H3>\n`;
+                htmlContent += `            <DL><p>\n`;
+
+                previewHtml += `<div class="tree-sub">└ 📁 ${escapeHtml(sub)} <span style="color:#777;font-weight:400;">(${items.length})</span></div>`;
+
+                items.forEach(item => {
+                    htmlContent += `                <DT><A HREF="${escapeHtml(item.url)}" ADD_DATE="${now}">${escapeHtml(item.title)}</A>\n`;
+
+                    const tagHtml = item.warning
+                        ? `<span class="tag-warn">${escapeHtml(item.warning)}</span>`
+                        : "";
+
+                    const showTitle = item.title.length > 58
+                        ? item.title.substring(0, 58) + "..."
+                        : item.title;
+
+                    previewHtml += `<div class="tree-item">${escapeHtml(showTitle)}${tagHtml}</div>`;
+                });
+
+                htmlContent += `            </DL><p>\n`;
+            }
+
+            htmlContent += `        </DL><p>\n`;
+        }
+
+        htmlContent += `    </DL><p>
+</DL><p>`;
+
+        finalHtml = htmlContent;
+
+        const date = new Date();
+        lastFileName = `书签栏优先版收藏夹_${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}.html`;
+
+        const stats = getEl("statsPanel");
+        stats.style.display = "block";
+        stats.innerHTML = `
+            <strong>📊 处理结果：</strong><br>
+            读取非空行数：${totalLineCount} 行<br>
+            成功生成书签：${validCount} 个<br>
+            大类数量：${categoryCount} 个<br>
+            小类数量：${subCategoryCount} 个<br>
+            重复链接：${dupCount} 个<br>
+            无效行：${invalidLines.length} 行<br>
+            生成模式：书签栏优先
+        `;
+
+        const warnPanel = getEl("warnPanel");
+
+        if (invalidLines.length > 0 || duplicateLines.length > 0) {
+            warnPanel.style.display = "block";
+
+            let warnHtml = `<strong>⚠️ 注意：</strong><br>`;
+
+            if (invalidLines.length > 0) {
+                warnHtml += `
+                    有 ${invalidLines.length} 行没有成功导入。建议检查这些行的 CSV 格式或网址字段。
+                    <details open>
+                        <summary>查看无效行</summary>
+                `;
+
+                invalidLines.slice(0, 50).forEach(item => {
+                    warnHtml += `
+                        <div class="warn-line">
+                            第 ${item.lineNumber} 行：${escapeHtml(item.reason)}<br>
+                            ${escapeHtml(item.line)}
+                        </div>
+                    `;
+                });
+
+                if (invalidLines.length > 50) {
+                    warnHtml += `<div class="warn-line">还有 ${invalidLines.length - 50} 行未显示。</div>`;
+                }
+
+                warnHtml += `</details>`;
+            }
+
+            if (duplicateLines.length > 0) {
+                warnHtml += `
+                    <details>
+                        <summary>查看重复链接</summary>
+                `;
+
+                duplicateLines.slice(0, 50).forEach(item => {
+                    warnHtml += `
+                        <div class="warn-line">
+                            第 ${item.lineNumber} 行：${escapeHtml(item.title)}<br>
+                            ${escapeHtml(item.url)}
+                        </div>
+                    `;
+                });
+
+                if (duplicateLines.length > 50) {
+                    warnHtml += `<div class="warn-line">还有 ${duplicateLines.length - 50} 条重复链接未显示。</div>`;
+                }
+
+                warnHtml += `</details>`;
+            }
+
+            warnPanel.innerHTML = warnHtml;
+        } else {
+            warnPanel.style.display = "none";
+            warnPanel.innerHTML = "";
+        }
+
+        getEl("previewTitle").style.display = "block";
+        getEl("previewPanel").style.display = "block";
+        getEl("previewPanel").innerHTML = previewHtml || "没有可预览的书签。";
+
+        getEl("dlBtn").style.display = "inline-flex";
+        getEl("copyBtn").style.display = "inline-flex";
+    }
+
+    function downloadData() {
+        if (!finalHtml) {
+            alert("请先点击“修复并生成”。");
+            return;
+        }
+
+        const blob = new Blob([finalHtml], {
+            type: "text/html;charset=utf-8"
+        });
+
+        const objectUrl = URL.createObjectURL(blob);
+
+        const link = document.createElement("a");
+        link.href = objectUrl;
+        link.download = lastFileName || "bookmarks.html";
+
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        setTimeout(() => {
+            URL.revokeObjectURL(objectUrl);
+        }, 500);
+    }
+
+    async function copyResult() {
+        if (!finalHtml) {
+            alert("请先点击“修复并生成”。");
+            return;
+        }
+
+        try {
+            await navigator.clipboard.writeText(finalHtml);
+            alert("生成结果已复制到剪贴板。");
+        } catch (e) {
+            const temp = document.createElement("textarea");
+            temp.value = finalHtml;
+            document.body.appendChild(temp);
+            temp.select();
+            document.execCommand("copy");
+            document.body.removeChild(temp);
+            alert("生成结果已复制到剪贴板。");
+        }
+    }
+
+    function clearAll() {
+        const ok = confirm("确定要清空当前输入和生成结果吗？");
+
+        if (!ok) return;
+
+        getEl("inputData").value = "";
+        resetOutput();
+    }
+
+    getEl("inputData").addEventListener("input", resetOutput);
+
+    resetOutput();
+</script>
+
+</body>
+</html>
